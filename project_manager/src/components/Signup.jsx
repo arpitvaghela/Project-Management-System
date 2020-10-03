@@ -14,6 +14,10 @@ import Title from "./components/Title";
 import PropTypes from "prop-types";
 import { Redirect } from "react-router-dom";
 import Copyright from "./components/Copyright";
+// import { gql } from "apollo-boost";
+import { execute, makePromise } from "apollo-link";
+import { createUser, link } from "./queries";
+import { withAlert } from "react-alert";
 
 const useStyles = createStyles((theme) => ({
   paper: {
@@ -35,6 +39,27 @@ const useStyles = createStyles((theme) => ({
   },
 }));
 
+// const createUser = gql`
+//   mutation(
+//     $firstname: String!
+//     $lastname: String!
+//     $username: String!
+//     $emailid: String!
+//     $password: String!
+//   ) {
+//     createUser(
+//       firstname: $firstname
+//       lastname: $lastname
+//       username: $username
+//       emailid: $emailid
+//       password: $password
+//     ) {
+//       msg
+//       status
+//     }
+//   }
+// `;
+
 class SignUp extends React.Component {
   constructor(props) {
     super(props);
@@ -45,18 +70,52 @@ class SignUp extends React.Component {
       username: "",
       password: "",
       signup: false,
+      // mutatatefunc: null,
+      message: "",
+      // data: [],
     };
     this.handleClick = this.handleClick.bind(this);
   }
 
   handleClick(event) {
-    const signupsucess = true;
     //call mutation query for graphql here
-    this.setState({ signup: signupsucess });
+    event.preventDefault();
+    const operation = {
+      query: createUser,
+      variables: {
+        firstname: this.state.first_name,
+        lastname: this.state.last_name,
+        emailid: this.state.email,
+        username: this.state.username,
+        password: this.state.password,
+      }, //optional
+    };
+
+    makePromise(execute(link, operation))
+      .then((data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        console.log(data);
+        if (data.data.createUser.status === true) {
+          this.props.alert.success("Created User Succesfully");
+          this.setState({ signup: data.data.createUser.status });
+        } else {
+          this.props.alert.error(data.data.createUser.msg);
+        }
+        this.setState({ message: data.data.createUser.msg });
+
+        // console.log(data.data.createUser.status);
+        // console.log(data.createUser.status);
+        console.log(this.state.signup);
+        console.log(this.state.message);
+      })
+      .catch((error) => console.log(`received error ${error}`));
+
+    // You can also easily pass variables for dynamic arguments
+
+    // this.setState({ signup: signupsucess });
   }
   render() {
     const { classes } = this.props;
-
     if (this.state.signup) {
       return (
         <Redirect
@@ -186,4 +245,4 @@ SignUp.propTypes = {
   classes: PropTypes.object.isRequired,
 };
 
-export default withStyles(useStyles)(SignUp);
+export default withAlert()(withStyles(useStyles)(SignUp));

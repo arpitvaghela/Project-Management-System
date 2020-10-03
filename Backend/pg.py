@@ -1,9 +1,14 @@
-import psycopg2 as db
 from collections import namedtuple
-# establish connection
+
+import psycopg2 as db
+
+# "dbname='pms' user='arpit' host='localhost' password='1let2me3in'"
+# "dbname='pms' user='dhruvil' password='ab::12097Ef'"
 
 
 def executequery(sql, data):
+    '''Establish connection'''
+
     DSN = "dbname='pms' user='arpit' host='localhost' password='1let2me3in'"
     try:
         with db.connect(DSN) as conn:
@@ -12,13 +17,21 @@ def executequery(sql, data):
                 with conn.cursor() as cur:
                     cur.execute(sql, data)
                     print(cur.query)
-
-            except Exception as e:
+            except db.IntegrityError as e:
                 return False, e.pgerror
             else:
                 return True, "Query Executed Succesfully"
-    except db.OperationalError as e:
+    except db.DatabaseError as e:
         return False, e.pgerror
+
+
+def executequery2(sql, data):
+    DSN = "dbname='pms' user='arpit' host='localhost' password='1let2me3in'"
+    with db.connect(DSN) as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, data)
+            return cur.fetchall()
+            print(cur.query)
 
 
 def inputfile(path):
@@ -39,4 +52,4 @@ def outputfile(blob, path):
 
 
 if __name__ == "__main__":
-    outputfile(inputfile('requirement.txt'),'r.txt')
+    print(executequery2("select * from getproject(%s,%s)", ['dhruvil91', 1]))

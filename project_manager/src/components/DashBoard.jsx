@@ -19,7 +19,10 @@ import Avatar from "@material-ui/core/Avatar";
 import Footer from "./components/Footer";
 import { Redirect } from "react-router-dom";
 import backgrondimage from "./img/background.jpg";
-
+import { execute, makePromise } from "apollo-link";
+import { getUser, link } from "./queries";
+import { withAlert } from "react-alert";
+import { Typography } from "@material-ui/core";
 const drawerWidth = 240;
 
 const useStyles = createStyles((theme) => ({
@@ -146,6 +149,9 @@ class Dashboard extends React.Component {
       username: "",
       authenticated: false,
       pagename: "dashboard",
+      firstname: "",
+      lastname: "",
+      emailid: "",
     };
 
     // console.log(this.props.username);
@@ -172,10 +178,32 @@ class Dashboard extends React.Component {
         authenticated: false,
       });
     }
+    const operation = {
+      query: getUser,
+      variables: {
+        username: this.props.location.state.username,
+      }, //optional
+    };
+    console.log(this.state.username);
+    makePromise(execute(link, operation))
+      .then((data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        // console.log(data);
+        if (data.data.getUser) {
+          this.setState({
+            firstname: data.data.getUser.firstname,
+            lastname: data.data.getUser.lastname,
+            emailid: data.data.getUser.email,
+          });
+        } else {
+          this.props.alert.error("cannot fetch user data");
+        }
+      })
+      .catch((error) => this.props.alert.error(`received error ${error}`));
   }
   componentDidMount() {
-    console.log(this.state.username);
-    console.log(this.state.authenticated);
+    // console.log(this.state.username);
+    // console.log(this.state.authenticated);
   }
   render() {
     if (this.state.authenticated === false) {
@@ -203,6 +231,19 @@ class Dashboard extends React.Component {
             state: {
               username: this.state.username,
               authenticated: this.state.authenticated,
+            },
+          }}
+        />
+      );
+    }
+    if (this.state.pagename === "logout") {
+      return (
+        <Redirect
+          to={{
+            pathname: "/login",
+            state: {
+              username: "",
+              authenticated: false,
             },
           }}
         />
@@ -403,9 +444,13 @@ class Dashboard extends React.Component {
                     <Avatar className={classes.avatar}>
                       <PeopleIcon />
                     </Avatar>
-                    <br></br>
-                    Profile Info:<br></br> Name: <br></br> Email:<br></br>{" "}
-                    Username:
+                    <Typography variant="h6">
+                      <br></br>
+                      Profile Info:<br></br> Name:
+                      {this.state.firstname + ` ` + this.state.lastname}{" "}
+                      <br></br> Email: {this.state.emailid}
+                      <br></br> Username:{this.state.username}
+                    </Typography>
                   </Paper>
                 </Grid>
                 <Footer />
@@ -420,4 +465,4 @@ class Dashboard extends React.Component {
     }
   }
 }
-export default withStyles(useStyles)(Dashboard);
+export default withAlert()(withStyles(useStyles)(Dashboard));

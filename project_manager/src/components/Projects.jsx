@@ -20,6 +20,9 @@ import AddProject from "./components/AddProject";
 import DeleteProject from "./components/DeleteProject";
 import { withAlert } from "react-alert";
 import NotesList from "./components/NotesList";
+import { execute, makePromise } from "apollo-link";
+import { myProjects, link } from "./queries";
+
 const useStyles = createStyles((theme) => ({
   root: {
     display: "flex",
@@ -73,35 +76,15 @@ class Projects extends React.Component {
     this.state = {
       username: "",
       authenticated: false,
-      pagename: "projects",
+      pagename: "",
       projectid: 42069,
-      projectlist: {
-        ongoing: [
-          {
-            projectid: 1,
-            name: "AAAAAAAAAAAAAAAA",
-            date: "12-4-20",
-            path: "git:arpit-vaghela:a",
-            username: "arpit-vaghela",
-            description: "This is a longer detailed description",
-            shortdescription: "Something there",
-          },
-        ],
-        completed: [
-          {
-            projectid: 2,
-            name: "BBBBBBBBBBBBB",
-            date: "12-4-20",
-            path: "git:arpit-vaghela:a",
-            username: "arpit-vaghela",
-            description: "This is a longer detailed description",
-            shortdescription: "Something there",
-          },
-        ],
-      },
+      loaded: 0,
+      projectlist: [],
     };
     this.handleToUpdate = this.handleToUpdate.bind(this);
     this.pageUpdate = this.pageUpdate.bind(this);
+    this.fetchdata = this.fetchdata.bind(this);
+    // this.fetchdata();
     // console.log(this.props.username);
     // console.log(this.props.location.state.username);
   }
@@ -113,10 +96,12 @@ class Projects extends React.Component {
       this.setState({ projectid: projectid1, pagename: "projectpage" });
     }
   }
-  pageUpdate() {
+  async pageUpdate() {
+    await this.fetchdata();
     this.setState({ pagename: "projects" });
   }
   componentWillMount() {
+    this.setState({ loaded: 0 });
     if (this.props.username !== undefined) {
       this.setState({
         username: this.props.username,
@@ -136,18 +121,66 @@ class Projects extends React.Component {
         authenticated: false,
       });
     }
+    // this.fetchdata();
+    // this.setState({ pagename: "projects" });
+  }
+  async fetchdata() {
+    let ongoing = [{}];
+    const operation1 = {
+      query: myProjects,
+      variables: {
+        username: this.state.username,
+        projectFilter: "ongoing",
+      }, //optional
+    };
+
+    await makePromise(execute(link, operation1))
+      .then((data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        console.log(data);
+        if (data.data) {
+          ongoing = data.data.myProjects;
+        }
+      })
+      .catch((error) => this.props.alert.error(error));
+
+    let completed;
+    const operation = {
+      query: myProjects,
+      variables: {
+        username: this.state.username,
+        projectFilter: "completed",
+      }, //optional
+    };
+
+    await makePromise(execute(link, operation))
+      .then((data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        console.log(data);
+        completed = data.data.myProjects;
+        console.log(completed);
+        let projectlist = {
+          ongoing: ongoing,
+          completed: completed,
+        };
+        // console.log(projectlist);
+        this.setState({ projectlist: projectlist, loaded: 1 });
+        console.log(this.state.projectlist);
+      })
+      .catch((error) => this.props.alert.error(error));
   }
 
-  componentDidMount() {
-    console.log(this.state.username);
-    console.log(this.state.authenticated);
-    console.log(this.state.pagename);
+  async componentDidMount() {
+    await this.fetchdata();
+    this.setState({ pagename: "projects" });
   }
 
   render() {
-    console.log(this.state.pagename);
     if (this.state.authenticated === false) {
       return <h1>Not Authenticated Go to Login Page and Login</h1>;
+    }
+    if (this.state.loaded === 0) {
+      return null;
     }
     let mid, maincontent;
     const { classes } = this.props;
@@ -158,55 +191,58 @@ class Projects extends React.Component {
     );
     // const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
     let aftermid = <NotesList username={this.state.username} />;
-
     if (this.state.pagename === "projects") {
-      mid = (
-        <>
-          <Grid container item justify="center" direction="row">
-            <Fab
-              color="primary"
-              aria-label="add"
-              className={classes.buttonclass}
-              onClick={(event) => this.setState({ pagename: "addproject" })}
-            >
-              <AddIcon />
-            </Fab>
-            <Fab
-              color="secondary"
-              aria-label="delete"
-              className={classes.buttonclass}
-              onClick={(event) => this.setState({ pagename: "deleteproject" })}
-            >
-              <DeleteRounded />
-            </Fab>
-          </Grid>
-          <ProjectList
-            projectlist={this.state.projectlist}
-            handleToUpdate={this.handleToUpdate}
-          />
-        </>
-      );
-
-      maincontent = (
-        <Container maxWidth="xl" className={classes.container}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={8} lg={9}>
-              <Paper className={fixedHeightPaper1}>
-                <Typography variant="h3" className={classes.headinger}>
-                  Your Projects
-                </Typography>
-
-                {mid}
-              </Paper>
+      if (this.state.projectlist.completed || this.state.projectlist.ongoing) {
+        mid = (
+          <>
+            <Grid container item justify="center" direction="row">
+              <Fab
+                color="primary"
+                aria-label="add"
+                className={classes.buttonclass}
+                onClick={(event) => this.setState({ pagename: "addproject" })}
+              >
+                <AddIcon />
+              </Fab>
+              <Fab
+                color="secondary"
+                aria-label="delete"
+                className={classes.buttonclass}
+                onClick={(event) =>
+                  this.setState({ pagename: "deleteproject" })
+                }
+              >
+                <DeleteRounded />
+              </Fab>
             </Grid>
-            {aftermid}
-            <Footer />
-          </Grid>
-          <Box pt={4}>
-            <Copyright />
-          </Box>
-        </Container>
-      );
+            <ProjectList
+              projectlist={this.state.projectlist}
+              handleToUpdate={this.handleToUpdate}
+            />
+          </>
+        );
+
+        maincontent = (
+          <Container maxWidth="xl" className={classes.container}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={8} lg={9}>
+                <Paper className={fixedHeightPaper1}>
+                  <Typography variant="h3" className={classes.headinger}>
+                    Your Projects
+                  </Typography>
+
+                  {mid}
+                </Paper>
+              </Grid>
+              {aftermid}
+              <Footer />
+            </Grid>
+            <Box pt={4}>
+              <Copyright />
+            </Box>
+          </Container>
+        );
+      }
     }
     if (this.state.pagename === "projectpage") {
       maincontent = (
@@ -249,6 +285,7 @@ class Projects extends React.Component {
       mid = (
         <DeleteProject
           username={this.state.username}
+          projects={this.state.projectlist}
           handleToUpdate={this.pageUpdate}
         />
       );

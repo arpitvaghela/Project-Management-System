@@ -31,7 +31,7 @@ type Task{
     endDate:Date
     dateofcompletion:Date
     priority:String
-    assignedby:String
+    assignedby:User
     assignedTo:[String!]
     preqTask:[Task!]
 }

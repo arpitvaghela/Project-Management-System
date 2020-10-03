@@ -11,6 +11,9 @@ import TaskList from "./TasksList";
 import TaskView from "./TaskView";
 import DeleteTask from "./DeleteTask";
 import AddTask from "./AddTask";
+import { execute, makePromise } from "apollo-link";
+import { ProjectTasks, link } from "../queries";
+import { withAlert } from "react-alert";
 
 const useStyles = createStyles((theme) => ({
   root: {
@@ -62,23 +65,89 @@ class TaskManagerProj extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      username: "",
-      projectid: 42069,
+      username: this.props.username,
+      projectid: this.props.projectid,
       tasks: [],
       viewname: "alltasklist", // add task delete task view task ( edit task )
       taskid: 42069,
       redirect: 0,
+      all: [],
+      active: [],
+      inactive: [],
+      working: [],
+      completed: [],
     };
     this.pageUpdate = this.pageUpdate.bind(this);
     this.handleToUpdate = this.handleToUpdate.bind(this);
+    this.fetchTasksFilter = this.fetchTasksFilter.bind(this);
+    this.fetchalldata = this.fetchalldata.bind(this);
   }
-  pageUpdate() {
+  async pageUpdate() {
+    await this.fetchalldata();
     this.setState({ viewname: "alltasklist" });
   }
   handleToUpdate(taskid) {
     this.setState({ taskid: taskid, viewname: "viewtask" });
   }
-  componentWillMount() {
+  async fetchTasksFilter(Filter) {
+    const operation1 = {
+      query: ProjectTasks,
+      variables: {
+        username: this.state.username,
+        taskFilter: Filter,
+        projectid: this.state.projectid,
+      }, //optional
+    };
+    let tasklist;
+    await makePromise(execute(link, operation1))
+      .then((data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        console.log(data);
+        if (data.data) {
+          tasklist = data.data.ProjectTasks;
+          console.log(tasklist);
+          // return tasklist;
+          if (Filter === null) {
+            this.setState({ all: tasklist });
+          }
+          if (Filter === "inactive") {
+            this.setState({ inactive: tasklist });
+          }
+          if (Filter === "active") {
+            this.setState({ active: tasklist });
+          }
+          if (Filter === "completed") {
+            this.setState({ completed: tasklist });
+          }
+          if (Filter === "working") {
+            this.setState({ working: tasklist });
+          }
+        }
+      })
+      .catch((error) => {
+        this.props.alert.error(error.message);
+        console.log(error);
+      });
+  }
+  async fetchalldata() {
+    await this.fetchTasksFilter(null);
+    await this.fetchTasksFilter("completed");
+    await this.fetchTasksFilter("working");
+    await this.fetchTasksFilter("inactive");
+    await this.fetchTasksFilter("active");
+    let tasklist = {
+      inactive: this.state.inactive,
+      working: this.state.working,
+      active: this.state.active,
+      completed: this.state.completed,
+      all: this.state.all,
+    };
+    this.setState({ tasks: tasklist, loaded: 1 });
+    console.log(tasklist);
+    console.log(this.state.tasks);
+  }
+
+  async componentWillMount() {
     if (
       this.props.username !== undefined &&
       this.props.projectid !== undefined
@@ -88,62 +157,7 @@ class TaskManagerProj extends React.Component {
         projectid: this.props.projectid,
       });
     }
-    this.setState({
-      tasks: {
-        completed: [
-          {
-            projectid: 1,
-            taskid: 1,
-            title: "Something",
-            description: "tou have to make sthis",
-            starttime: "12-2-5555",
-            endtime: "2-45-4566",
-            status_type: "active",
-            completiontime: "2-3-5555",
-            priority_type: "normal",
-            assignedby: "arpitvagehal",
-          },
-          {
-            projectid: 1,
-            taskid: 1,
-            title: "Something",
-            description: "tou have to make sthis",
-            starttime: "12-2-5555",
-            endtime: "2-45-4566",
-            status_type: "active",
-            completiontime: "2-3-5555",
-            priority_type: "normal",
-            assignedby: "arpitvagehal",
-          },
-        ],
-        ongoing: [
-          {
-            projectid: 1,
-            taskid: 1,
-            title: "Something",
-            description: "tou have to make sthis",
-            starttime: "12-2-5555",
-            endtime: "2-45-4566",
-            status_type: "active",
-            completiontime: "2-3-5555",
-            priority_type: "normal",
-            assignedby: "arpitvagehal",
-          },
-          {
-            projectid: 1,
-            taskid: 1,
-            title: "Something",
-            description: "tou have to make sthis",
-            starttime: "12-2-5555",
-            endtime: "2-45-4566",
-            status_type: "active",
-            completiontime: "2-3-5555",
-            priority_type: "normal",
-            assignedby: "arpitvagehal",
-          },
-        ],
-      },
-    });
+    await this.fetchalldata();
     // fetch all tasks here
   }
   componentDidUpdate() {
@@ -151,12 +165,17 @@ class TaskManagerProj extends React.Component {
   }
   render() {
     const { classes } = this.props;
-    let mid = (
-      <TaskList
-        tasklist={this.state.tasks}
-        handleToUpdate={this.handleToUpdate}
-      />
-    );
+    let mid;
+    if (this.state.loaded === 1) {
+      console.log(this.state.tasks);
+      mid = (
+        <TaskList
+          tasklist={this.state.tasks}
+          handleToUpdate={this.handleToUpdate}
+        />
+      );
+    }
+
     const fixedHeightPaper1 = clsx(
       classes.paper,
       classes.fixedHeight,
@@ -201,6 +220,7 @@ class TaskManagerProj extends React.Component {
         <DeleteTask
           username={this.state.username}
           projectid={this.state.projectid}
+          tasks={this.state.tasks.all}
           handleToUpdate={this.pageUpdate}
         />
       );
@@ -228,4 +248,4 @@ class TaskManagerProj extends React.Component {
   }
 }
 
-export default withStyles(useStyles)(TaskManagerProj);
+export default withAlert()(withStyles(useStyles)(TaskManagerProj));

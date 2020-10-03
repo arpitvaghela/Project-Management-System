@@ -15,7 +15,12 @@ const useStyles = createStyles((theme) => ({
     backgroundColor: theme.palette.secondary.main,
   },
 }));
+
 class Listelemproj extends React.Component {
+  componentDidUpdate() {
+    this.render();
+  }
+
   render() {
     const { classes } = this.props;
     return (
@@ -35,9 +40,9 @@ class Listelemproj extends React.Component {
             primary={this.props.project.shortdescription}
             secondary={
               `Started: ` +
-              this.props.project.date +
+              this.props.project.createdon +
               ` Created By: ` +
-              this.props.project.username
+              this.props.project.createdby.username
             }
           ></ListItemText>
           {/* <Card project={this.props.project}></Card> */}

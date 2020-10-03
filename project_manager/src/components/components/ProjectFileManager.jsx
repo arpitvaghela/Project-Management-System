@@ -61,14 +61,15 @@ class ProjectFileManager extends React.Component {
   }
   componentWillMount() {
     this.setState({ files: this.props.files, projectid: this.props.projectid });
-    this.setState({ states: this.props.stateforedit });
+    // this.setState({ states: this.props.stateforedit });
 
     // console.log(this.props.files);
   }
   handleToUpdate(someArg) {
-    this.setState({ fileid: someArg, viewname: "onefile" });
+    this.setState({ fileid: someArg });
   }
   handlePage() {
+    this.props.handleToUpdate();
     this.setState({ viewname: "allfiles" });
   }
 
@@ -76,7 +77,7 @@ class ProjectFileManager extends React.Component {
     if (this.setState.viewname === "back") {
       this.props.handleToUpdate();
     }
-    console.log(this.state.states);
+    // console.log(this.state.states);
   }
   handleClose() {
     this.setState({
@@ -180,7 +181,7 @@ class ProjectFileManager extends React.Component {
                             </Avatar>
                           </ListItemAvatar>
                           <ListItemText
-                            primary={members.username}
+                            primary={members.user.username}
                             secondary={members.role}
                           />
                         </ListItem>

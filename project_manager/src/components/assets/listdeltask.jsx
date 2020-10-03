@@ -33,7 +33,7 @@ class Listdeltask extends React.Component {
 
   componentDidUpdate() {
     if (this.state.selected > 1) {
-      this.props.alert.info("deleting more than one project is not advised");
+      this.props.alert.info("deleting more than one task is not advised");
     }
   }
 

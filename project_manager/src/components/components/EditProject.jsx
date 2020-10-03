@@ -1,6 +1,10 @@
 import React from "react";
 import { createStyles, withStyles } from "@material-ui/core/styles";
 import { Grid, TextField, Paper, Button } from "@material-ui/core";
+import { execute, makePromise } from "apollo-link";
+import { editProject, deleteMember, link } from "../queries";
+import { withAlert } from "react-alert";
+
 const useStyles = createStyles((theme) => ({
   avatar: {
     margin: theme.spacing(1),
@@ -20,16 +24,19 @@ const useStyles = createStyles((theme) => ({
 class EditProject extends React.Component {
   constructor(props) {
     super(props);
+
     this.state = {
-      projectid: 42069,
-      name: "ProjectPage",
-      date: "",
-      path: "",
-      username: "",
-      shortdescription: "",
-      description: "",
-      files: [],
-      members: [],
+      projectid: this.props.projectid,
+      name: this.props.name,
+      date: this.props.date,
+      path: this.props.path,
+      username: this.props.username,
+      shortdescription: this.props.shortdescription,
+      description: this.props.description,
+      files: this.props.files,
+      members: this.props.members,
+      memberstring: "",
+      deletemember: "",
     };
     this.handleClick = this.handleClick.bind(this);
   }
@@ -43,14 +50,74 @@ class EditProject extends React.Component {
       shortdescription: this.props.shortdescription,
       description: this.props.description,
       members: this.props.members,
+      memberstring: "",
     });
   }
   handleClick(event) {
     event.preventDefault();
     console.log("Clicker");
     console.log(this.state.members);
-    //if success redirect back
-    this.props.handleToUpdate();
+    let message = [
+      {
+        username: "",
+        role: "",
+      },
+    ];
+    try {
+      if (this.state.memberstring !== "") {
+        message = JSON.parse(this.state.memberstring);
+      }
+      console.log(message);
+    } catch (e) {
+      this.props.alert.error(e.message);
+    }
+    console.log(message);
+    const operation = {
+      query: editProject,
+      variables: {
+        ld: this.state.description,
+        name: this.state.name,
+        path: this.state.path,
+        sd: this.state.shortdescription,
+        username: this.state.username,
+        members: message,
+        projectid: this.state.projectid,
+      }, //optional
+    };
+    const operationdel = {
+      query: deleteMember,
+      variables: {
+        username: this.state.username,
+        projectid: this.state.projectid,
+        member: this.state.deletemember,
+      },
+    };
+    makePromise(execute(link, operation))
+      .then((data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        console.log(data);
+        if (data.data.editProject.status === false) {
+          this.props.alert.error(data.data.editProject.msg);
+        }
+        if (data.data.editProject.status === true) {
+          this.props.alert.success("Success on Editing project");
+          // this.props.handleToUpdate();
+        }
+      })
+      .catch((error) => this.props.alert.error(error.message));
+
+    makePromise(execute(link, operationdel))
+      .then((data) => {
+        if (data.data.deleteMember.status === false) {
+          this.props.alert.error(
+            "Failed Delete Member" + data.data.deleteMember.msg
+          );
+        }
+        if (data.data.deleteMember.status === true) {
+          this.props.alert.success("Success on deleting");
+        }
+      })
+      .catch((error) => this.props.alert.error(error.message));
   }
   render() {
     const { classes } = this.props;
@@ -141,14 +208,43 @@ class EditProject extends React.Component {
                 required
                 id="title"
                 name="titile"
-                label="Member : Enter members in json format [{'username':'ksp','role':'leader'},{}]"
+                label='Add/Edit Member : format [{"username":"ksp","role":"leader"},{}]'
                 fullWidth
-                value={this.state.members[0].username}
+                value={this.state.memberstring}
                 onChange={(event) => {
                   this.setState({
-                    members: JSON.parse(event.target.value),
+                    memberstring: event.target.value,
                   });
                 }}
+                //
+                //   autoComplete="fname"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                required
+                id="title"
+                name="titile"
+                label="delete Member : add one username"
+                fullWidth
+                value={this.state.deletemember}
+                onChange={(event) => {
+                  this.setState({
+                    deletemember: event.target.value,
+                  });
+                }}
+                //
+                //   autoComplete="fname"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                required
+                id="title"
+                name="titile"
+                label="this shows previous member list"
+                fullWidth
+                value={JSON.stringify(this.state.members)}
                 //
                 //   autoComplete="fname"
               />
@@ -181,4 +277,4 @@ class EditProject extends React.Component {
   }
 }
 
-export default withStyles(useStyles)(EditProject);
+export default withAlert()(withStyles(useStyles)(EditProject));

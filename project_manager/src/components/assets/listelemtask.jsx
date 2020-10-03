@@ -38,7 +38,7 @@ class Listelemtask extends React.Component {
             primary={this.props.task.description}
             secondary={
               `Started: ` +
-              this.props.task.startdate +
+              this.props.task.starttime +
               ` Assignmed By: ` +
               this.props.task.assignedby
             }

@@ -23,6 +23,7 @@ import AssignmentReturnedIcon from "@material-ui/icons/AssignmentReturned";
 import SettingsIcon from "@material-ui/icons/Settings";
 import { Link } from "react-router-dom";
 import { Link as MaterialLink } from "@material-ui/core";
+import ExitToAppIcon from "@material-ui/icons/ExitToApp";
 
 const drawerWidth = 240;
 
@@ -144,6 +145,7 @@ export default function Header(props) {
               pagename: "projects",
             },
           }}
+          // onClick={() => window.location.reload()}
         >
           <ListItem button>
             <ListItemIcon>
@@ -240,6 +242,24 @@ export default function Header(props) {
               <PeopleIcon />
             </ListItemIcon>
             <ListItemText primary="Profile" />
+          </ListItem>
+        </Link>
+      </MaterialLink>
+      <MaterialLink>
+        <Link
+          to={{
+            pathname: "/login",
+            state: {
+              username: "",
+              authenticated: false,
+            },
+          }}
+        >
+          <ListItem button>
+            <ListItemIcon>
+              <ExitToAppIcon />
+            </ListItemIcon>
+            <ListItemText primary="logout" />
           </ListItem>
         </Link>
       </MaterialLink>

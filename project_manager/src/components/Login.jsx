@@ -14,6 +14,9 @@ import Container from "@material-ui/core/Container";
 import Title from "./components/Title";
 import { Redirect } from "react-router-dom";
 import Copyright from "./components/Copyright";
+import { execute, makePromise } from "apollo-link";
+import { authenticate, link } from "./queries";
+
 // import { useAlert } from "react-alert";
 import { withAlert } from "react-alert";
 const useStyles = createStyles((theme) => ({
@@ -51,15 +54,27 @@ class SignIn extends React.Component {
     event.preventDefault();
     console.log(this.state.username);
     console.log(this.state.password);
-    if (this.state.username === "hello" && this.state.password === "world") {
-      console.log("login");
-      //   history.push("/");
-      // this.setState({})
-      this.props.alert.success("Login Sucessfull");
-      this.setState({ authenticated: true });
-    } else {
-      console.log("not login");
-    }
+    const operation = {
+      query: authenticate,
+      variables: {
+        username: this.state.username,
+        password: this.state.password,
+      }, //optional
+    };
+
+    makePromise(execute(link, operation))
+      .then((data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        console.log(data);
+        if (data.data.authenticate === true) {
+          this.props.alert.success("Login Successfull");
+
+          this.setState({ authenticated: true });
+        } else {
+          this.props.alert.error("Login Failed username or password wrong");
+        }
+      })
+      .catch((error) => console.log(`received error ${error}`));
   }
 
   render() {

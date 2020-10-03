@@ -13,14 +13,44 @@ import Profiles from "./components/Profiles";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
 import { positions, Provider } from "react-alert";
-import AlertTemplate from "react-alert-template-basic";
+// import AlertTemplate from "react-alert-template-basic";
 import red from "@material-ui/core/colors/red";
 import blue from "@material-ui/core/colors/blue";
+import Alert from "@material-ui/lab/Alert";
+import CloseIcon from "@material-ui/icons/Close";
+import IconButton from "@material-ui/core/IconButton";
+// import { ApolloProvider } from "@apollo/react-hooks";
+// import ApolloClient from "apollo-boost";
+
+// const client = new ApolloClient({
+//   uri: "http://localhost:5000/graphql-api",
+// });
 
 const options = {
-  timeout: 5000,
+  timeout: 7000,
   position: positions.BOTTOM_CENTER,
+  offset: "10px",
 };
+const AlertTemplate = ({ style, options, message, close }) => (
+  <div style={style}>
+    <Alert
+      variant="filled"
+      severity={options.type}
+      action={
+        <IconButton
+          aria-label="close"
+          color="inherit"
+          size="small"
+          onClick={close}
+        >
+          <CloseIcon fontSize="inherit" />
+        </IconButton>
+      }
+    >
+      {message}
+    </Alert>
+  </div>
+);
 
 const theme = createMuiTheme({
   palette: {
@@ -35,6 +65,7 @@ const theme = createMuiTheme({
 
 function App() {
   return (
+    // <ApolloProvider client={client}>
     <Provider template={AlertTemplate} {...options}>
       <ThemeProvider theme={theme}>
         <Router>

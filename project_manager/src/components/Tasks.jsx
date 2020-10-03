@@ -14,6 +14,10 @@ import backgrondimage from "./img/background.jpg";
 import TaskView from "./components/TaskView";
 import TaskList from "./components/TasksList";
 import NotesList from "./components/NotesList";
+import { execute, makePromise } from "apollo-link";
+import { myTasks, link } from "./queries";
+import { withAlert } from "react-alert";
+
 const useStyles = createStyles((theme) => ({
   root: {
     display: "flex",
@@ -69,16 +73,78 @@ class Tasks extends React.Component {
       username: "",
       authenticated: false,
       pagename: "tasks",
-      tasklist: { completed: [], ongoing: [] },
+      tasklist: [],
       taskid: 42069,
       redirect: 0,
+      loaded: 0,
+      active: [],
+      inactive: [],
+      all: [],
+      completed: [],
+      working: [],
     };
     this.handleToUpdate = this.handleToUpdate.bind(this);
+    this.fetchDataFilter = this.fetchDataFilter.bind(this);
     // console.log(this.props.username);
     // console.log(this.props.location.state.username);
   }
   // call api here to get rest of user data from backend
   // this.handleClick = this.handleClick.bind(this);
+
+  async fetchDataFilter(Filter) {
+    const operation1 = {
+      query: myTasks,
+      variables: {
+        username: this.state.username,
+        taskFilter: Filter,
+      }, //optional
+    };
+    let tasklist;
+    await makePromise(execute(link, operation1))
+      .then((data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        console.log(data);
+        if (data.data) {
+          tasklist = data.data.myTasks;
+          console.log(tasklist);
+          // return tasklist;
+          if (Filter === null) {
+            this.setState({ all: tasklist });
+          }
+          if (Filter === "inactive") {
+            this.setState({ inactive: tasklist });
+          }
+          if (Filter === "active") {
+            this.setState({ active: tasklist });
+          }
+          if (Filter === "completed") {
+            this.setState({ completed: tasklist });
+          }
+          if (Filter === "working") {
+            this.setState({ working: tasklist });
+          }
+        }
+      })
+      .catch((error) => this.props.alert.error(error));
+  }
+
+  async fetchalldata() {
+    await this.fetchDataFilter(null);
+    await this.fetchDataFilter("completed");
+    await this.fetchDataFilter("working");
+    await this.fetchDataFilter("inactive");
+    await this.fetchDataFilter("active");
+    let tasklist = {
+      inactive: this.state.inactive,
+      working: this.state.working,
+      active: this.state.active,
+      completed: this.state.completed,
+      all: this.state.all,
+    };
+    this.setState({ tasklist: tasklist, loaded: 1 });
+    console.log(this.state.tasklist);
+  }
+
   handleToUpdate(taskid) {
     this.setState({ taskid: taskid, pagename: "viewtask" });
   }
@@ -100,67 +166,11 @@ class Tasks extends React.Component {
         authenticated: false,
       });
     }
-
-    this.setState({
-      tasklist: {
-        completed: [
-          {
-            projectid: 1,
-            taskid: 1,
-            title: "Something",
-            description: "tou have to make sthis",
-            starttime: "12-2-5555",
-            endtime: "2-45-4566",
-            status_type: "active",
-            completiontime: "2-3-5555",
-            priority_type: "normal",
-            assignedby: "arpitvagehal",
-          },
-          {
-            projectid: 1,
-            taskid: 1,
-            title: "Something",
-            description: "tou have to make sthis",
-            starttime: "12-2-5555",
-            endtime: "2-45-4566",
-            status_type: "active",
-            completiontime: "2-3-5555",
-            priority_type: "normal",
-            assignedby: "arpitvagehal",
-          },
-        ],
-        ongoing: [
-          {
-            projectid: 1,
-            taskid: 1,
-            title: "Something",
-            description: "tou have to make sthis",
-            starttime: "12-2-5555",
-            endtime: "2-45-4566",
-            status_type: "active",
-            completiontime: "2-3-5555",
-            priority_type: "normal",
-            assignedby: "arpitvagehal",
-          },
-          {
-            projectid: 1,
-            taskid: 1,
-            title: "Something",
-            description: "tou have to make sthis",
-            starttime: "12-2-5555",
-            endtime: "2-45-4566",
-            status_type: "active",
-            completiontime: "2-3-5555",
-            priority_type: "normal",
-            assignedby: "arpitvagehal",
-          },
-        ],
-      },
-    });
   }
-  componentDidMount() {
+  async componentDidMount() {
     console.log(this.state.username);
     console.log(this.state.authenticated);
+    await this.fetchalldata();
   }
 
   render() {
@@ -182,7 +192,8 @@ class Tasks extends React.Component {
         />
       );
     }
-    if (this.state.pagename === "tasks") {
+    if (this.state.pagename === "tasks" && this.state.loaded === 1) {
+      console.log(this.state.tasklist);
       mid = (
         <TaskList
           tasklist={this.state.tasklist}
@@ -223,4 +234,4 @@ class Tasks extends React.Component {
     );
   }
 }
-export default withStyles(useStyles)(Tasks);
+export default withAlert()(withStyles(useStyles)(Tasks));

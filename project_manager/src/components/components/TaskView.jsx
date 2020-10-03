@@ -13,6 +13,11 @@ import {
 } from "@material-ui/core";
 import PeopleIcon from "@material-ui/icons/People";
 import EditTask from "./EditTask";
+import { execute, makePromise } from "apollo-link";
+import { getTask, preqTask, completeTask, link } from "../queries";
+import { withAlert } from "react-alert";
+import WorkIcon from "@material-ui/icons/Work";
+
 const useStyles = createStyles((theme) => ({
   avatar: {
     margin: theme.spacing(1),
@@ -31,8 +36,8 @@ class TaskView extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      username: "",
-      projectid: "",
+      username: this.props.username,
+      projectid: this.props.projectid,
       taskid: this.props.taskid,
       title: "",
       description: "",
@@ -43,41 +48,93 @@ class TaskView extends React.Component {
       priority_type: "",
       assignedby: "",
       assignedto: [],
-      viewname: "taskdetails", // edit task
+      viewname: "taskdetails",
+      preqtask: [],
+      preqtasklist: [],
+      loaded: 1, // edit task
     };
     this.pageUpdate = this.pageUpdate.bind(this);
+    this.fetchData = this.fetchData.bind(this);
+    this.completetask = this.completetask.bind(this);
   }
-  pageUpdate() {
+
+  completetask() {
+    const operation4 = {
+      query: completeTask,
+      variables: {
+        taskid: this.props.taskid,
+        username: this.props.username,
+      },
+    };
+    makePromise(execute(link, operation4))
+      .then((data) => {
+        if (data.data.completeTask.status === true) {
+          this.props.alert.success("Task Completed");
+
+          // this.setState({ authenticated: true });
+        } else {
+          this.props.alert.error(data.data.completeTask.msg);
+        }
+      })
+      .catch((error) => console.log(error));
+    // await this.fetchData();
+  }
+
+  async fetchData() {
+    const operation1 = {
+      query: getTask,
+      variables: {
+        taskid: this.props.taskid,
+      }, //optional
+    };
+    await makePromise(execute(link, operation1))
+      .then(async (data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        console.log(data);
+        let task = data.data.getTask;
+        let preqtask = task.preqtask;
+        let preqtasklist = [];
+        let x;
+        let operation2;
+        if (preqtask[0] !== null) {
+          for (x of preqtask) {
+            console.log(x);
+            operation2 = {
+              query: preqTask,
+              variables: {
+                taskid: x,
+              }, //optional
+            };
+            await makePromise(execute(link, operation2)).then((data) => {
+              preqtasklist.push(data.data.getTask);
+            });
+          }
+        }
+        console.log(preqtasklist);
+        this.setState({
+          title: task.title,
+          description: task.description,
+          starttime: task.starttime,
+          endtime: task.endtime,
+          completiontime: task.completiontime,
+          status_type: task.status,
+          priority_type: task.priority,
+          assignedby: task.assignedby,
+          assignedto: task.assignedto,
+          preqtask: task.preqtask,
+          preqtasklist: preqtasklist,
+          loaded: 1,
+        });
+      })
+      .catch((error) => console.log(error));
+  }
+  async pageUpdate() {
+    await this.fetchData();
     this.setState({ viewname: "taskdetails" });
   }
-  componentWillMount() {
-    this.setState({
-      username: "Hello",
-      projectid: 1,
-      taskid: 1,
-      title: "Something",
-      description: "tou have to make sthis",
-      starttime: "12-2-5555",
-      endtime: "2-45-4566",
-      status_type: "active",
-      completiontime: "2-3-5555",
-      priority_type: "normal",
-      assignedby: "arpitvagehal",
-      assignedto: [
-        {
-          username: "Something",
-        },
-        {
-          username: "Something",
-        },
-        {
-          username: "Something",
-        },
-        {
-          username: "Something",
-        },
-      ],
-    });
+
+  componentDidMount() {
+    this.fetchData();
   }
   render() {
     const { classes } = this.props;
@@ -97,12 +154,13 @@ class TaskView extends React.Component {
           color="primary"
           aria-label="edit"
           className={classes.buttonclass}
-          onClick={() => null}
+          onClick={this.completetask}
         >
           Complete Task
         </Button>
       </Grid>
     );
+    let preqtasklist = this.state.preqtasklist;
     mid = (
       <Paper className={classes.paper}>
         <Typography variant="h4">{this.state.title}</Typography>
@@ -145,10 +203,35 @@ class TaskView extends React.Component {
                       <PeopleIcon></PeopleIcon>
                     </Avatar>
                   </ListItemAvatar>
-                  <ListItemText
-                    primary={assignedto.username}
-                    secondary={assignedto.role}
-                  />
+                  <ListItemText primary={assignedto.username} />
+                </ListItem>
+              ))}
+            </>
+          }
+        </List>
+        <Typography variant="subtitle1">Prerequisite Tasks:</Typography>
+        <List className={classes.listroot}>
+          {
+            <>
+              {preqtasklist.map((preqtasklist) => (
+                <ListItem button>
+                  <ListItemAvatar>
+                    <Avatar className={classes.avatar}>
+                      <WorkIcon></WorkIcon>
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText>
+                    <Typography variant="h5">{preqtasklist.title}</Typography>
+                    <Typography variant="h6">
+                      {preqtasklist.description}
+                    </Typography>
+                    <Typography variant="subtitle1">
+                      {`Status :` +
+                        preqtasklist.status +
+                        ` Priority :` +
+                        preqtasklist.priority}
+                    </Typography>
+                  </ListItemText>
                 </ListItem>
               ))}
             </>
@@ -157,11 +240,27 @@ class TaskView extends React.Component {
       </Paper>
     );
     if (this.state.viewname === "edittask") {
-      mid = <EditTask states={this.state} handleToUpdate={this.pageUpdate} />;
+      mid = (
+        <EditTask
+          username={this.state.username}
+          projectid={this.state.projectid}
+          taskid={this.state.taskid}
+          title={this.state.title}
+          description={this.state.description}
+          starttime={this.state.starttime}
+          endtime={this.state.endtime}
+          status_type={this.state.status_type}
+          priority_type={this.state.priority_type}
+          assignedby={this.state.assignedby}
+          assignedto={this.state.assignedto}
+          preqtaskid={this.state.preqtask}
+          handleToUpdate={this.pageUpdate}
+        />
+      );
       low = null;
     }
     return [mid, low];
   }
 }
 
-export default withStyles(useStyles)(TaskView);
+export default withAlert()(withStyles(useStyles)(TaskView));

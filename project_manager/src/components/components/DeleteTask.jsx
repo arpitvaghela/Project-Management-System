@@ -3,6 +3,8 @@ import { createStyles, withStyles } from "@material-ui/core/styles";
 import Listdeltask from "../assets/listdeltask";
 import { Grid, Paper } from "@material-ui/core";
 import { withAlert } from "react-alert";
+import { deleteTask, link } from "../queries";
+import { execute, makePromise } from "apollo-link";
 const useStyles = createStyles((theme) => ({
   avatar: {
     margin: theme.spacing(1),
@@ -20,7 +22,7 @@ class DeleteTask extends React.Component {
       taskid: [],
       selected: 0,
       deleteflag: 0,
-      tasks: [],
+      tasks: this.props.tasks,
       username: "",
       projectid: "",
     };
@@ -28,7 +30,35 @@ class DeleteTask extends React.Component {
     // this.handleClick = this.handleClick.bind(this);
   }
   handleUpdate(projid, number) {
+    let success;
     this.setState({ taskid: projid, selected: number, deleteflag: 1 });
+    let x;
+    for (x of projid) {
+      const operation = {
+        query: deleteTask,
+        variables: {
+          username: this.state.username,
+          taskid: x,
+        }, //optional
+      };
+
+      makePromise(execute(link, operation)) // eslint-disable-next-line
+        .then((data) => {
+          console.log(data);
+          // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+          if (data.data.deleteTask.status === false) {
+            this.props.alert.error(data.data.deleteTask.msg);
+          }
+          if (data.data.deleteTask.status === true) {
+            // eslint-disable-next-line
+            this.props.alert.success("Success on delete");
+          }
+        })
+        .catch((error) => this.props.alert.error(error));
+    }
+
+    success = true;
+    if (success) this.props.handleToUpdate();
   }
   componentDidUpdate() {
     if (this.state.deleteflag === 1) {
@@ -43,35 +73,6 @@ class DeleteTask extends React.Component {
     this.setState({
       username: this.props.username,
       projectid: this.props.projectid,
-    });
-
-    this.setState({
-      tasks: [
-        {
-          projectid: 1,
-          taskid: 1,
-          title: "Something",
-          description: "tou have to make sthis",
-          starttime: "12-2-5555",
-          endtime: "2-45-4566",
-          status_type: "active",
-          completiontime: "2-3-5555",
-          priority_type: "normal",
-          assignedby: "arpitvagehal",
-        },
-        {
-          projectid: 1,
-          taskid: 1,
-          title: "Something",
-          description: "tou have to make sthis",
-          starttime: "12-2-5555",
-          endtime: "2-45-4566",
-          status_type: "active",
-          completiontime: "2-3-5555",
-          priority_type: "normal",
-          assignedby: "arpitvagehal",
-        },
-      ],
     });
   }
   render() {

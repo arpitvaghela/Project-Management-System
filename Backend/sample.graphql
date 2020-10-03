@@ -1,46 +1,249 @@
 mutation {
-  createUser(firstname:"Arpit",lastname:"Vaghela",username:"arpit91",emailid:"arpitvaghela@gmail.com",password:"Password1"){
-      msg
-      status
+  createUser(
+    firstname: "Arpit"
+    lastname: "Vaghela"
+    username: "arpit91"
+    emailid: "arpitvaghela@gmail.com"
+    password: "Password1"
+  ) {
+    msg
+    status
   }
 }
 
 mutation {
-  deleteUser(username:"arpit91"){
+  createUser(
+    firstname: "Dhruvil"
+    lastname: "Dave"
+    username: "dhruvil91"
+    emailid: "dhruvildave@gmail.com"
+    password: "Password1"
+  ) {
+    msg
+    status
+  }
+}
+
+mutation {
+  createUser(
+    firstname: "Panth"
+    lastname: "Patel"
+    username: "panth91"
+    emailid: "panthpatel@gmail.com"
+    password: "Password1"
+  ) {
+    msg
+    status
+  }
+}
+
+mutation {
+  createUser(
+    firstname: "Prachee"
+    lastname: "Javiya"
+    username: "prachee91"
+    emailid: "pracheejaviya@gmail.com"
+    password: "Password1"
+  ) {
+    msg
+    status
+  }
+}
+
+mutation {
+  createUser(
+    firstname: "Kaushal"
+    lastname: "Patil"
+    username: "kaushal91"
+    emailid: "kaushalpatil@gmail.com"
+    password: "Password1"
+  ) {
+    msg
+    status
+  }
+}
+
+mutation {
+  createUser(
+    firstname: "Kaushal"
+    lastname: "Patil"
+    username: "kaushal69"
+    emailid: "kaushalpatil1@gmail.com"
+    password: "Password1"
+  ) {
+    msg
+    status
+  }
+}
+
+mutation {
+  deleteUser(username: "kaushal69") {
     status
     msg
   }
 }
-mutation {
-  changeName(newfirstname:"Alpha",newlastname:"Beta",username:"arpit91"){
-      msg
-      status
-  }
-}
 
 mutation {
-  createProject(name:"Project1",createdby:"arpit91"){
-      msg
-      status
-  }
-}
-
-mutation {
-  deleteProject(projectid:1,username:"arpit91"){
-      msg
-      status
-  }
-}
-
-mutation{
-  changeProjectname(projectid:2,newname:"The project",username:"arpit-vaghela"){
+  createProject(
+    username: "arpit91"
+    name: "Project1"
+    shortdescription: "description1"
+    longdescription: "description2"
+    members: [
+      { username: "kaushal91", role: "leader" }
+      { username: "dhruvil91", role: "leader" }
+    ]
+  ) {
     status
     msg
   }
 }
-mutation{
-  addMember(projectid:2,username:"arpit-vaghela",members:["panth-pate","prachee-javiya"]){
+
+mutation {
+  createProject(
+    username: "arpit91"
+    name: "Project2"
+    shortdescription: "description1"
+    longdescription: "description2"
+    members: [
+      { username: "kaushal91", role: "member" }
+      { username: "dhruvil91", role: "leader" }
+    ]
+  ) {
     status
     msg
+  }
+}
+
+mutation {
+  createProject(
+    username: "dhruvil91"
+    name: "Project1"
+    shortdescription: "description1"
+    longdescription: "description2"
+    members: [
+      { username: "kaushal91", role: "leader" }
+      { username: "arpit91", role: "leader" }
+    ]
+  ) {
+    status
+    msg
+  }
+}
+
+mutation {
+  changeName(newfirstname: "Alpha", newlastname: "Beta", username: "arpit91") {
+    msg
+    status
+  }
+}
+
+mutation {
+  createProject(name: "Projectx", username: "arpit91") {
+    msg
+    status
+  }
+}
+
+mutation {
+  createProject(name: "Projectx", username: "dhruvil91") {
+    msg
+    status
+  }
+}
+
+mutation {
+  createProject(name: "Projectx", username: "kaushal91") {
+    msg
+    status
+  }
+}
+
+# mutation {
+#   deleteProject(projectid: 2, username: "arpit91") {
+#     msg
+#     status
+#   }
+# }
+
+mutation {
+  addNote(title: "Note1", description: "Why ppl Y ???", username: "arpit91") {
+    status
+    msg
+  }
+}
+
+mutation {
+  addNote(title: "Note2", description: "Why ppl Z ???", username: "kaushal91") {
+    status
+    msg
+  }
+}
+
+mutation {
+  addTask(
+    assignedby: "arpit91"
+    assignedto: ["dhruvil91", "kaushal91"]
+    projectid: 3
+    title: "Shit left"
+  ) {
+    status
+    msg
+  }
+}
+
+mutation {
+  addTask(
+    assignedby: "arpit91"
+    assignedto: ["dhruvil91", "kaushal91"]
+    projectid: 4
+    title: "Shit left"
+  ) {
+    status
+    msg
+  }
+}
+
+mutation {
+  updateTask(
+    assignedto: ["dhruvil91"]
+    taskid: 3
+    username: "arpit91"
+    title: "Shit left"
+    preqtaskid: []
+  ) {
+    status
+    msg
+  }
+}
+
+mutation {
+  completeTask(taskid: 3, username: "dhruvil91") {
+    status
+    msg
+  }
+}
+
+{
+  myProjects(username: "arpit91") {
+    projectid
+    name
+    shortdescription
+    longdescription
+    createdon
+    path
+    createdby {
+      username
+      firstname
+      lastname
+    }
+    members {
+      user {
+        username
+        firstname
+        lastname
+      }
+      role
+    }
   }
 }

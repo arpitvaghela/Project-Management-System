@@ -34,8 +34,15 @@ class ProjectList extends React.Component {
     this.setState({ projectid: someArg, redirect: 1 });
   }
 
-  componentDidUpdate() {
-    this.props.handleToUpdate(this.state.projectid, this.state.redirect);
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.projectid !== this.state.projectid) {
+      this.props.handleToUpdate(this.state.projectid, this.state.redirect);
+    }
+  }
+
+  componentDidMount() {
+    this.setState({ projectlist: this.props.projectlist });
+    console.log(this.state.projectlist);
   }
   render() {
     const classes = useStyles();
@@ -65,6 +72,7 @@ class ProjectList extends React.Component {
       ListElement = <List className={classes.list}>{listItems1}</List>;
     }
     if (this.state.value === 2) {
+      // console.log(projectscom);
       let projectscom = this.state.projectlist.completed;
       let listItems2 = projectscom.map((projectscom) => (
         <Listelemproj
@@ -76,7 +84,7 @@ class ProjectList extends React.Component {
     }
 
     return (
-      <Grid conatiner justify="center" xs={12}>
+      <Grid container justify="center" xs={12}>
         {" "}
         <Paper className={classes.root}>
           <Tabs

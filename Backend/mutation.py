@@ -1,4 +1,6 @@
-from graphene import Mutation, ObjectType, String, Boolean, Int, List, NonNull, types, InputObjectType
+from graphene import (Boolean, InputObjectType, Int, List, Mutation, NonNull,
+                      ObjectType, String, types)
+from graphene_file_upload.scalars import Upload
 import pg
 
 
@@ -64,23 +66,39 @@ class deleteUser(Mutation):
         return deleteUser(status=s, msg=m)
 
 
+class InputMember(InputObjectType):
+    username = String(required=True)
+    role = String()
+
+
 class createProject(Mutation):
     class Arguments:
-        name = String()
-        createdby = String()
+        username = String(required=True)
+        name = String(required=True)
+        longdescription = String()
+        shortdescription = String()
         path = String()
+        members = List(InputMember)
 
     status = Boolean(required=True)
     msg = String()
 
-    def mutate(root, info, name, createdby, path=None):
+    def mutate(root,
+               info,
+               username,
+               name,
+               longdescription=None,
+               shortdescription=None,
+               path=None,
+               members=None):
+        usernames = [x.username
+                     for x in members] if members is not None else None
+        roles = [x.role for x in members] if members is not None else None
+        m = [[x, y] for x, y in zip(usernames, roles)
+             ] if usernames is not None and roles is not None else None
         s, m = pg.executequery(
-            "INSERT INTO project(name, createdon, path, createdby) VALUES (%s, CURRENT_DATE, %s,%s);",
-            [
-                name,
-                path,
-                createdby,
-            ])
+            "call create_project(%s,%s,%s,%s,%s,%s);",
+            [username, name, longdescription, shortdescription, path, m])
         return createProject(status=s, msg=m)
 
 
@@ -98,64 +116,70 @@ class deleteProject(Mutation):
         return deleteProject(status=s, msg=m)
 
 
-class changeProjectName(Mutation):
+class editProject(Mutation):
     class Arguments:
         username = String(required=True)
         projectid = Int(required=True)
-        newname = String(required=True)
+        name = String(required=True)
+        shortdescription = String()
+        longdescription = String()
+        path = String()
+        members = List(InputMember)
 
     status = Boolean(required=True)
     msg = String()
 
-    def mutate(root, info, username, newname, projectid):
-        s, m = pg.executequery("CALL change_projectname(%s,%s,%s);",
-                               [username, newname, projectid])
-        return changeProjectName(status=s, msg=m)
-
-
-class changeProjectPath(Mutation):
-    class Arguments:
-        username = String(required=True)
-        projectid = Int(required=True)
-        newpath = String(required=True)
-
-    status = Boolean(required=True)
-    msg = String()
-
-    def mutate(root, info, username, newpath, projectid):
-        s, m = pg.executequery("change_projectpath(%s,%s,%s);",
-                               [username, newpath, projectid])
-        return changeProjectName(status=s, msg=m)
-
-
-class addMembers(Mutation):
-    class Arguments:
-        username = String(required=True)
-        projectid = Int(required=True)
-        members = NonNull(List(NonNull(String)))
-
-    status = Boolean(required=True)
-    msg = String()
-
-    def mutate(root, info, username, members, projectid):
-        s, m = pg.executequery("CALL add_members(%s,%s,%s);",
-                               [username, members, projectid])
-        return addMembers(status=s, msg=m)
+    def mutate(root,
+               info,
+               username,
+               name,
+               projectid,
+               shortdescription=None,
+               longdescription=None,
+               path=None,
+               members=None):
+        usernames = [x.username for x in members
+                     if x.username] if members is not None else None
+        roles = [x.role for x in members
+                 if x.role] if members is not None else None
+        m = [[x, y] for x, y in zip(usernames, roles)
+             ] if usernames is not None else None
+        s, msg = pg.executequery("call edit_project (%s,%s,%s,%s,%s,%s,%s);", [
+            username, projectid, name, shortdescription, longdescription, path,
+            m
+        ])
+        return editProject(status=s, msg=msg)
 
 
 class deleteMember(Mutation):
     class Arguments:
         username = String(required=True)
         member = String(required=True)
-        projectid = String(required=True)
+        projectid = Int(required=True)
 
     status = Boolean(required=True)
     msg = String()
 
     def mutate(root, info, username, member, projectid):
-        s, m = pg.executequery("CALL delete_members(%s,%s,%s);",
+        s, m = pg.executequery("call delete_member (%s,%s,%s);",
                                [username, member, projectid])
         return deleteMember(status=s, msg=m)
+
+
+class addMember(Mutation):
+    class Arguments:
+        username = String(required=True)
+        member = String(required=True)
+        projectid = Int(required=True)
+        role = String()
+
+    status = Boolean(required=True)
+    msg = String()
+
+    def mutate(root, info, username, member, projectid, role=None):
+        s, m = pg.executequery("call add_member(%s,%s,%s,%s);",
+                               [username, member, projectid, role])
+        return addMember(status=s, msg=m)
 
 
 class addTask(Mutation):
@@ -165,8 +189,8 @@ class addTask(Mutation):
         projectid = Int(required=True)
         title = String(required=True)
         description = String()
-        starttime = types.DateTime()
-        endtime = types.DateTime()
+        startdate = types.DateTime()
+        enddate = types.DateTime()
         priority = String()
         preqtaskid = List(NonNull(Int))
 
@@ -186,12 +210,47 @@ class addTask(Mutation):
                preqtaskid=None):
         if not priority:
             priority = 'normal'
-            s, m = pg.executequery(
-                "call add_task (%s,%s,%s,%s,%s,%s,%s,%s);", [
-                    assignedby, assignedto, projectid, title, description,
-                    startdate, enddate, priority, preqtaskid
-                ])
+        s, m = pg.executequery("call add_task (%s,%s,%s,%s,%s,%s,%s,%s,%s);", [
+            assignedby, assignedto, projectid, title, description, startdate,
+            enddate, priority, preqtaskid
+        ])
         return addTask(status=s, msg=m)
+
+
+class updateTask(Mutation):
+    class Arguments:
+        username = String(required=True)
+        taskid = Int(required=True)
+        title = String(required=True)
+        description = String()
+        starttime = types.DateTime()
+        endtime = types.DateTime()
+        priority = String()
+        preqtaskid = List(NonNull(Int))
+        assignedto = NonNull(List(NonNull(String)))
+
+    status = Boolean(required=True)
+    msg = String()
+
+    def mutate(
+        root,
+        info,
+        username,
+        taskid,
+        title,
+        assignedto,
+        preqtaskid=None,
+        description=None,
+        startdate=None,
+        enddate=None,
+        priority=None,
+    ):
+        s, m = pg.executequery(
+            'call edit_task (%s,%s,%s,%s,%s,%s,%s,%s,%s::integer[]);', [
+                username, taskid, assignedto, title, description, startdate,
+                enddate, priority, preqtaskid
+            ])
+        return updateTask(status=s, msg=m)
 
 
 class deleteTask(Mutation):
@@ -265,8 +324,7 @@ class deleteNote(Mutation):
     msg = String()
 
     def mutate(root, info, username, noteid):
-        s, m = pg.executequery('delete from note where noteid = %s);',
-                               [noteid, username])
+        s, m = pg.executequery('delete from note where noteid = %s;', [noteid])
         return deleteNote(status=s, msg=m)
 
 
@@ -291,4 +349,24 @@ class editNote(Mutation):
         s, m = pg.executequery(
             'update note set title = %s description = %s color = %s createdby = %s where noteid = %s);',
             [title, description, color, username, noteid])
+        return editNote(status=s, msg=m)
+
+
+class UploadProjectFile(Mutation):
+    class Arguments:
+        file = Upload()
+        filename = String(required=True)
+        projectid = Int(required=True)
+
+    status = Boolean(required=True)
+    msg = String()
+
+    def mutate(root, info, filename, projectid, file=None):
+        if file is not None:
+            f = file.read()
+        else:
+            f = None
+        s, m = pg.executequery(
+            'insert into projectfiles (filename,file,projectid) values(%s,%s,%s)',
+            [filename, f, projectid])
         return editNote(status=s, msg=m)

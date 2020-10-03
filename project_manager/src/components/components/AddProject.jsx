@@ -1,6 +1,9 @@
 import React from "react";
 import { createStyles, withStyles } from "@material-ui/core/styles";
 import { Grid, TextField, Paper, Button } from "@material-ui/core";
+import { execute, makePromise } from "apollo-link";
+import { createProject, link } from "../queries";
+import { withAlert } from "react-alert";
 const useStyles = createStyles((theme) => ({
   avatar: {
     margin: theme.spacing(1),
@@ -25,8 +28,9 @@ class AddProject extends React.Component {
       name: "",
       date: "",
       path: "",
-      description: "",
+      longdescription: "",
       shortdescription: "",
+      members: null,
     };
     this.handleClick = this.handleClick.bind(this);
   }
@@ -36,10 +40,38 @@ class AddProject extends React.Component {
     }
   }
   handleClick(event) {
-    event.preventDefault();
-    console.log("Clicker");
-    //if success redirect back
-    this.props.handleToUpdate();
+    // event.preventDefault();
+    try {
+      JSON.parse(this.state.members);
+    } catch (e) {
+      this.props.alert.error(e.message);
+    }
+
+    const operation = {
+      query: createProject,
+      variables: {
+        ld: this.state.longdescription,
+        name: this.state.name,
+        path: this.state.path,
+        sd: this.state.shortdescription,
+        username: this.state.username,
+        members: JSON.parse(this.state.members),
+      }, //optional
+    };
+
+    makePromise(execute(link, operation))
+      .then((data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        console.log(data);
+        if (data.data.createProject.status === false) {
+          this.props.alert.error(data.data.createProject.msg);
+        }
+        if (data.data.createProject.status === true) {
+          this.props.alert.success("Success on adding project");
+          this.props.handleToUpdate();
+        }
+      })
+      .catch((error) => this.props.alert.error(error.message));
   }
   render() {
     const { classes } = this.props;
@@ -88,7 +120,7 @@ class AddProject extends React.Component {
                 label="Description"
                 fullWidth
                 onChange={(event) =>
-                  this.setState({ description: event.target.value })
+                  this.setState({ longdescription: event.target.value })
                 }
                 //   autoComplete="billing address-line2"
               />
@@ -116,8 +148,24 @@ class AddProject extends React.Component {
                 fullWidth
                 inputProps={{ readOnly: true }}
                 onChange={(event) =>
-                  this.setState({ date: event.target.value })
+                  this.setState({
+                    date: event.target.value + "T07:13:05+00:00",
+                  })
                 }
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                required
+                id="title"
+                name="titile"
+                label="Member : Enter members in json format [{'username':'ksp','role':'leader'},{}]"
+                fullWidth
+                onChange={(event) => {
+                  this.setState({ members: event.target.value });
+                }}
+                //
+                //   autoComplete="fname"
               />
             </Grid>
           </Grid>
@@ -147,4 +195,4 @@ class AddProject extends React.Component {
   }
 }
 
-export default withStyles(useStyles)(AddProject);
+export default withAlert()(withStyles(useStyles)(AddProject));

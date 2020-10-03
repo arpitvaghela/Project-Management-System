@@ -1,7 +1,9 @@
 import React from "react";
 import { createStyles, withStyles } from "@material-ui/core/styles";
 import { Grid, Paper, TextField, MenuItem, Button } from "@material-ui/core";
-
+import { execute, makePromise } from "apollo-link";
+import { addNote, link } from "../queries";
+import { withAlert } from "react-alert";
 const useStyles = createStyles((theme) => ({
   avatar: {
     margin: theme.spacing(1),
@@ -22,21 +24,83 @@ class AddNote extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      username: "",
+      username: this.props.username,
       title: "",
       description: "",
       color: "",
-      fetchmethod: "user",
-      projectid: "",
+      fetchmethod: "",
+      projectid: this.props.projectid,
     };
     this.handleClick = this.handleClick.bind(this);
   }
 
+  componentWillMount() {
+    if (this.props.fetchmethod) {
+      this.setState({ fetchmethod: this.props.fetchmethod });
+    }
+  }
   handleClick() {
     //call mutation here
-    console.log(this.state);
+    console.log("do this");
+    if (this.state.fetchmethod === "user") {
+      console.log("didthis");
+      const operation = {
+        query: addNote,
+        variables: {
+          title: this.state.title,
+          color: this.state.color,
+          description: this.state.description,
+          username: this.state.username,
+        }, //optional
+      };
+
+      makePromise(execute(link, operation))
+        .then((data) => {
+          // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+          console.log(data);
+          if (data.data.addNote.status === false) {
+            this.props.alert.error(data.data.addNote.msg);
+          }
+          if (data.data.addNote.status === true) {
+            this.props.alert.success("Success on adding note");
+            this.props.handleToUpdate();
+          }
+        })
+        .catch((error) => this.props.alert.error(error));
+    }
+    if (this.state.fetchmethod === "project") {
+      // eslint-disable-next-line
+      {
+        console.log(this.state.projectid);
+        console.log("didthis2");
+        const operation = {
+          query: addNote,
+          variables: {
+            title: this.state.title,
+            color: this.state.color,
+            description: this.state.description,
+            username: this.state.username,
+            projectid: this.state.projectid,
+          }, //optional
+        };
+
+        makePromise(execute(link, operation))
+          .then((data) => {
+            // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+            if (data.data.addNote.status === false) {
+              this.props.alert.error(data.data.addNote.msg);
+            }
+            if (data.data.addNote.status === true) {
+              this.props.alert.success("Success on adding note");
+              this.props.handleToUpdate();
+              console.log(this.state.projectid);
+            }
+          })
+          .catch((error) => this.props.alert.error(error));
+      }
+    }
     //on sucess redirect
-    this.props.handleToUpdate();
+
     // Different Mutation Called Based on fetch method
   }
   render() {
@@ -58,6 +122,9 @@ class AddNote extends React.Component {
                 label="Task title"
                 fullWidth
                 value={this.state.title}
+                onChange={(event) =>
+                  this.setState({ title: event.target.value })
+                }
                 //   autoComplete="fname"
               />
             </Grid>
@@ -70,6 +137,9 @@ class AddNote extends React.Component {
                 label="Description"
                 fullWidth
                 value={this.state.description}
+                onChange={(event) =>
+                  this.setState({ description: event.target.value })
+                }
                 //   autoComplete="billing address-line2"
               />
             </Grid>
@@ -102,7 +172,7 @@ class AddNote extends React.Component {
           variant="contained"
           color="primary"
           className={classes.submit}
-          onClick={(event) => this.handleClick(event)}
+          onClick={this.handleClick}
         >
           Add
         </Button>
@@ -122,4 +192,4 @@ class AddNote extends React.Component {
   }
 }
 
-export default withStyles(useStyles)(AddNote);
+export default withAlert()(withStyles(useStyles)(AddNote));

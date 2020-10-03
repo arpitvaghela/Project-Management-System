@@ -1,6 +1,9 @@
 import React from "react";
 import { createStyles, withStyles } from "@material-ui/core/styles";
 import { Grid, TextField, Paper, Button, MenuItem } from "@material-ui/core";
+import { execute, makePromise } from "apollo-link";
+import { updateTask, link } from "../queries";
+import { withAlert } from "react-alert";
 const useStyles = createStyles((theme) => ({
   avatar: {
     margin: theme.spacing(1),
@@ -17,22 +20,23 @@ const useStyles = createStyles((theme) => ({
   },
 }));
 
-class AddTask extends React.Component {
+class EditTask extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      username: "",
-      projectid: "",
+      username: this.props.username,
+      projectid: this.props.projectid,
       taskid: this.props.taskid,
-      title: "",
-      description: "",
-      starttime: "",
-      endtime: "",
-      status_type: "",
-      completiontime: "",
-      priority_type: "",
-      assignedby: "",
-      assignedto: [],
+      title: this.props.title,
+      description: this.props.description,
+      starttime: this.props.starttime,
+      endtime: this.props.endtime,
+      status_type: this.props.status_type,
+      completiontime: this.props.completiontime,
+      priority_type: this.props.priority_type,
+      assignedby: this.props.assignedby,
+      assignedto: this.props.assignedto,
+      preqtaskid: this.props.preqtaskid,
       viewname: "taskdetails", // edit task
     };
     this.handleClick = this.handleClick.bind(this);
@@ -44,13 +48,42 @@ class AddTask extends React.Component {
     }
     this.setState(this.props.states);
     this.setState({ assignedto: [] });
+    console.log(this.props.assignedto);
   }
-  handleClick(event) {
-    event.preventDefault();
-    console.log(this.state.assignedto);
-    console.log("Clicker");
+  async handleClick(event) {
+    // event.preventDefault();
+    // console.log(this.state.assignedto);
+    // console.log("Clicker");
     //if success redirect back
-    this.props.handleToUpdate();
+    const operation = {
+      query: updateTask,
+      variables: {
+        assignedto: this.state.assignedto,
+        description: this.state.description,
+        enddate: this.state.enddate,
+        priority: this.state.priority_type,
+        taskid: this.state.taskid,
+        title: this.state.title,
+        username: this.state.username,
+      }, //optional
+    };
+    await makePromise(execute(link, operation))
+      .then((data) => {
+        // console.log(`received data ${JSON.stringify(data, null, 2)}`)
+        console.log(data);
+        if (data.data.addTask.status === false) {
+          this.props.alert.error(data.data.addTask.msg);
+        }
+        if (data.data.addTask.status === true) {
+          this.props.alert.success("Success on editing Task");
+          this.props.handleToUpdate();
+          // this.props.handleToUpdate();
+        }
+      })
+      .catch((error) => {
+        this.props.alert.error(error.message);
+        console.log(error);
+      });
   }
   render() {
     const { classes } = this.props;
@@ -58,11 +91,6 @@ class AddTask extends React.Component {
     var dd = String(today.getDate()).padStart(2, "0");
     var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
     var yyyy = today.getFullYear();
-    const status_type = [
-      { value: "active", label: "active" },
-      { value: "inactive", label: "inactive" },
-      { value: "working", label: "working" },
-    ];
     const priority_type = [
       { value: "highest", label: "highest" },
       { value: "high", label: "high" },
@@ -83,6 +111,9 @@ class AddTask extends React.Component {
                 label="Task title"
                 fullWidth
                 value={this.state.title}
+                onChange={(event) =>
+                  this.setState({ title: event.target.value })
+                }
                 //   autoComplete="fname"
               />
             </Grid>
@@ -95,31 +126,14 @@ class AddTask extends React.Component {
                 label="Description"
                 fullWidth
                 value={this.state.description}
+                onChange={(event) =>
+                  this.setState({ description: event.target.value })
+                }
                 //   autoComplete="billing address-line2"
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                required
-                select
-                id="status_type"
-                name="status_type"
-                label="status_type"
-                value={this.state.status_type}
-                fullWidth
-                onChange={(event) =>
-                  this.setState({ status_type: event.target.value })
-                }
-                //   autoComplete="billing address-level2"
-              >
-                {status_type.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6}>
+
+            <Grid item xs={12}>
               <TextField
                 required
                 select
@@ -147,7 +161,7 @@ class AddTask extends React.Component {
                 id="date"
                 name="date"
                 label="StartDate"
-                defaultValue={this.state.starttime}
+                defaultValue={today}
                 fullWidth
                 inputProps={{ readOnly: true }}
               />
@@ -157,9 +171,14 @@ class AddTask extends React.Component {
                 type="date"
                 id="date"
                 name="date"
-                label="EndDate"
-                defaultValue={this.state.endtime}
+                helperText="EndDate:Change Only if you want to edit"
+                // defaultValue={this.state.endtime}
                 fullWidth
+                onChange={(event) =>
+                  this.setState({
+                    enddate: event.target.value + "T07:45:05.567947",
+                  })
+                }
               />
             </Grid>
             <Grid item xs={12}>
@@ -169,6 +188,7 @@ class AddTask extends React.Component {
                 name="titile"
                 label="Assigned To : Enter username seperated by a comma"
                 fullWidth
+                defaultValue={JSON.stringify(this.state.assignedto)}
                 value={this.state.assignedto}
                 onChange={(event) => {
                   this.setState({
@@ -207,4 +227,4 @@ class AddTask extends React.Component {
   }
 }
 
-export default withStyles(useStyles)(AddTask);
+export default withAlert()(withStyles(useStyles)(EditTask));

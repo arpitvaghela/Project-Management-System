@@ -1,0 +1,5 @@
+DROP DATABASE IF EXISTS pms;
+
+CREATE DATABASE pms;
+
+\c pms

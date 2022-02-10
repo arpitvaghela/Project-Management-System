@@ -17,7 +17,7 @@
     "apollo-link": "^1.2.14",
     "graphql": "^15.0.0",
     "material-ui-dropzone": "^2.5.0",
-    "node-sass": "^4.13.1",
+    "node-sass": "^7.0.0",
     "npm-alert": "^1.0.0",
     "react": "^16.13.1",
     "react-alert": "^7.0.0",
